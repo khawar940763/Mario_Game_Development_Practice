@@ -12,7 +12,7 @@ import java.util.List;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
-public class RenderBatch {
+public class RenderBatch implements Comparable<RenderBatch>{
 
     // position                            color                              tex coords                  tex id
     // float , float ,                   float , float , float , float ,      float , float,             float
@@ -37,9 +37,10 @@ public class RenderBatch {
     private Shader shader;
     private List<Texture> textures ;
     private int[] texSlots = { 0 , 1 , 2 , 3 , 4 , 5 , 6, 7};
+    private int zIndex;
 
-    public RenderBatch(int maxBatchSize){
-        System.out.println("Creating a new render batch");
+    public RenderBatch(int maxBatchSize , int zIndex){
+        this.zIndex = zIndex;
         shader = AssetPool.getShader("assets/shaders/default.glsl");
         shader.compile();
         this.sprites = new SpriteRenderer[maxBatchSize];
@@ -168,9 +169,21 @@ public class RenderBatch {
     }
 
     public void render(){
-        // For now we will re-buffer all data every frame
-        glBindBuffer(GL_ARRAY_BUFFER , vboID);
-        glBufferSubData(GL_ARRAY_BUFFER , 0 , vertices);
+        boolean rebufferData = false;
+        for(int i=0; i < numSprites ; i++){
+            SpriteRenderer spr = sprites[i];
+            if(spr.isDirty()){
+                loadVertexProperties(i);
+                spr.setClean();
+                rebufferData = true;
+            }
+        }
+
+        if(rebufferData) {
+            // For now we will re-buffer all data every frame
+            glBindBuffer(GL_ARRAY_BUFFER, vboID);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, vertices);
+        }
 
           //use shader
         shader.use();
@@ -238,5 +251,13 @@ public class RenderBatch {
         return this.textures.contains(tex);
     }
 
+    public int zIndex(){
+        return this.zIndex;
+    }
 
+
+    @Override
+    public int compareTo(RenderBatch o) {
+        return Integer.compare(this.zIndex , o.zIndex);
+    }
 }

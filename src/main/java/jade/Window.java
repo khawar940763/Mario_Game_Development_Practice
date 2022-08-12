@@ -15,21 +15,21 @@ import static org.lwjgl.system.MemoryStack.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public class Window {
-    private int height , width;
+    private static int height , width;
     private String title;
     private long glfwWindow;
     private static Scene currentScene = null;
     public static float r , g , b ,a ;
-
     private static Window window = null;
+    private ImGuiLayer imGuiLayer;
 
     private Window(){
         this.height = 1080;
         this.width = 1920;
         this.title = "Mario";
-        this.r = 0.0f;
-        this.g = 0.0f;
-        this.b = 0.0f;
+        this.r = 1.0f;
+        this.g = 1.0f;
+        this.b = 1.0f;
         this.a = 1.0f;
     }
 
@@ -124,6 +124,10 @@ public class Window {
         glfwSetMouseButtonCallback(glfwWindow , MouseListener::mouseButtonCallback);
         glfwSetScrollCallback(glfwWindow , MouseListener::mouseScrollCallback);
         glfwSetKeyCallback(glfwWindow , KeyListener::keyCallback);
+        glfwSetWindowSizeCallback(glfwWindow , (w , newWidth , newHeight)->{
+            Window.setWidth(newWidth);
+            Window.setHeight(newHeight);
+        });
 
         // Make the OpenGL context current
         glfwMakeContextCurrent(glfwWindow);
@@ -139,6 +143,12 @@ public class Window {
         // creates the GLCapabilities instance and makes the OpenGL
         // bindings available for use.
         GL.createCapabilities();
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE  , GL_ONE_MINUS_SRC_ALPHA);
+
+        this.imGuiLayer = new ImGuiLayer(glfwWindow);
+        this.imGuiLayer.initImGui();
 
         Window.changeScene(0);
     }
@@ -168,6 +178,8 @@ public class Window {
                 currentScene.update(dt);
 
             }
+
+            this.imGuiLayer.update(dt);
             glfwSwapBuffers(glfwWindow); // swap the color buffers ( It should be at the end and after rendering of any graphics otherwise graphic won't be visible)
 
             endTime = (float) glfwGetTime();
@@ -175,6 +187,20 @@ public class Window {
             beginTime = Time.getTime();
 
         }
+    }
+    public static int getWidth(){
+        return get().width;
+    }
+
+    public static int getHeight(){
+        return get().height;
+    }
+
+    public static void setWidth(int width){
+        get().width = width;
+    }
+    public static void setHeight(int height){
+        get().height = height;
     }
 
 }

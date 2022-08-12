@@ -6,6 +6,7 @@ group 'org.example'
 version '1.0-SNAPSHOT'
 
 repositories {
+    jcenter()
     mavenCentral()
 }
 
@@ -16,9 +17,20 @@ dependencies {
 project.ext.lwjglVersion = "3.3.1"
 project.ext.jomlVersion = "1.10.4"
 project.ext.lwjglNatives = "natives-windows"
+project.ext.imguiVersion = "1.86"
 
 
 dependencies {
+//
+//    implementation "io.imgui.java:binding:$imguiVersion"
+//    implementation "io.imgui.java:lwjgl3:$imguiVersion"
+//
+//    runtimeOnly "io.imgui.java:natives-windows:$imguiVersion"
+
+    //Imgui files
+    implementation fileTree('libs') { include '*.jar'}
+
+    //GWJGL files
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
 
     implementation "org.lwjgl:lwjgl"
