@@ -1,5 +1,8 @@
 package editor;
 
+import Physics2d.components.Box2DCollider;
+import Physics2d.components.CircleCollider;
+import Physics2d.components.Rigidbody2D;
 import components.NonPickable;
 import imgui.ImGui;
 import jade.GameObject;
@@ -38,6 +41,31 @@ public class PropertiesWindow {
     public void imgui(){
         if(activeGameObject != null){
             ImGui.begin("Properties");
+
+            if(ImGui.beginPopupContextWindow("ComponentAdder")){
+                if(ImGui.menuItem("Add Rigidbody")){
+                    if(activeGameObject.getComponent(Rigidbody2D.class) == null){
+                        activeGameObject.addComponent(new Rigidbody2D());
+                    }
+                }
+
+                if(ImGui.menuItem("Add Box Collider")){
+                    if(activeGameObject.getComponent(Box2DCollider.class) == null &&
+                             activeGameObject.getComponent(CircleCollider.class) == null){
+                        activeGameObject.addComponent(new Box2DCollider());
+                    }
+                }
+
+                if(ImGui.menuItem("Add Circle Collider")){
+                    if(activeGameObject.getComponent(Box2DCollider.class) == null &&
+                            activeGameObject.getComponent(CircleCollider.class) == null){
+                        activeGameObject.addComponent(new CircleCollider());
+                    }
+                }
+
+                ImGui.endPopup();
+            }
+
             activeGameObject.imgui();
             ImGui.end();
         }
