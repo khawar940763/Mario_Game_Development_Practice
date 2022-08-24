@@ -11,6 +11,7 @@ public class Renderer {
 
     private final int MAX_BATCH_SIZE = 1000;
     public List<RenderBatch> batches;
+    private static Shader currentShader;
 
     public Renderer(){
         this.batches = new ArrayList<>();
@@ -27,7 +28,7 @@ public class Renderer {
     private void add( SpriteRenderer spr){
         boolean added = false;
         for(RenderBatch batch : batches){
-            if(batch.hasRoom() && batch.zIndex() == spr.gameObject.zIndex()){
+            if(batch.hasRoom() && batch.zIndex() == spr.gameObject.transform.zIndex){
                 Texture tex = spr.getTexture();
                 if(tex == null && ( batch.hasTexture(tex) || batch.hasTextureRoom())) {
                     batch.addSprite(spr);
@@ -37,7 +38,7 @@ public class Renderer {
             }
         }
         if(!added){
-            RenderBatch newBatch = new RenderBatch(MAX_BATCH_SIZE , spr.gameObject.zIndex());
+            RenderBatch newBatch = new RenderBatch(MAX_BATCH_SIZE , spr.gameObject.transform.zIndex);
             newBatch.start();
             batches.add(newBatch);
             newBatch.addSprite(spr);
@@ -45,7 +46,16 @@ public class Renderer {
         }
     }
 
+    public static void bindShader(Shader shader){
+        currentShader = shader;
+    }
+
+    public static Shader getBoundShader(){
+        return currentShader;
+    }
+
     public  void render(){
+        currentShader.use();
         for(RenderBatch batch : batches){
             batch.render();
         }

@@ -1,0 +1,22 @@
+package scenes;
+
+public class LevelScene extends Scene {
+
+
+
+    public LevelScene(){
+
+    }
+
+    public void init(){
+    }
+    @Override
+    public void update(float dt) {
+
+
+    }
+    @Override
+    public void render(){
+
+    }
+}

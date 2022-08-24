@@ -1,5 +1,10 @@
 package jade;
 
+import renderer.*;
+import scenes.LevelEditorScene;
+import scenes.LevelScene;
+import scenes.Scene;
+import util.AssetPool;
 import util.Time;
 import org.lwjgl.*;
 import org.lwjgl.glfw.*;
@@ -22,10 +27,14 @@ public class Window {
     public static float r , g , b ,a ;
     private static Window window = null;
     private ImGuiLayer imGuiLayer;
+    private Framebuffer framebuffer;
+    private PickingTexture pickingTexture;
+
+    public static int aspectX = 900 , aspectY = 506;
 
     private Window(){
-        this.height = 1080;
-        this.width = 1920;
+        this.height = 600;
+        this.width = 720;
         this.title = "Mario";
         this.r = 1.0f;
         this.g = 1.0f;
@@ -37,18 +46,18 @@ public class Window {
         switch (newScene){
             case 0:
                 currentScene = new LevelEditorScene();
-                currentScene.init();
-                currentScene.start();
+
                 break;
             case 1:
                 currentScene = new LevelScene();
-                currentScene.init();
-                currentScene.start();
                 break;
             default:
                 assert false: "Unknown Scene '" + newScene + "'";
                 break;
         }
+        currentScene.load();
+        currentScene.init();
+        currentScene.start();
     }
 
     public static Window get(){
@@ -129,6 +138,7 @@ public class Window {
             Window.setHeight(newHeight);
         });
 
+
         // Make the OpenGL context current
         glfwMakeContextCurrent(glfwWindow);
         // Enable v-sync
@@ -147,13 +157,20 @@ public class Window {
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE  , GL_ONE_MINUS_SRC_ALPHA);
 
-        this.imGuiLayer = new ImGuiLayer(glfwWindow);
+        this.framebuffer = new Framebuffer(aspectX , aspectY);
+        this.pickingTexture = new PickingTexture(aspectX , aspectY);
+        glViewport(0 , 0 , aspectX , aspectY);
+
+        this.imGuiLayer = new ImGuiLayer(glfwWindow, pickingTexture);
         this.imGuiLayer.initImGui();
 
         Window.changeScene(0);
     }
 
     private void loop() {
+        Shader defaultShader = AssetPool.getShader("assets/shaders/default.glsl");
+        Shader pickingShader = AssetPool.getShader("assets/shaders/pickingShader.glsl");
+
 
 
         // Run the rendering loop until the user has attempted to close
@@ -169,24 +186,50 @@ public class Window {
             // invoked during this call.
             glfwPollEvents();
 
+            //Render pass 1: Render to picking frame
+            glDisable(GL_BLEND);
+            pickingTexture.enableWritnig();
+            glViewport(0 , 0 , aspectX , aspectY);
+            glClearColor(0.0f , 0.0f , 0.f , 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            Renderer.bindShader(pickingShader);
+            currentScene.render();
+
+
+
+            pickingTexture.disableWriting();
+            glEnable(GL_BLEND);
+
+            //Render pass 2: Render the actual game
+
+            DebugDraw.beginFrame();
+
             // Set the clear color
+            this.framebuffer.bind();
             glClearColor(r, g, b, a);
             glClear(GL_COLOR_BUFFER_BIT); // clear the framebuffer
 
 
             if(dt >= 0){
+                DebugDraw.draw();
+                Renderer.bindShader(defaultShader);
                 currentScene.update(dt);
-
+                currentScene.render();
             }
+            this.framebuffer.unbind();
 
-            this.imGuiLayer.update(dt);
+            this.imGuiLayer.update(dt , currentScene);
             glfwSwapBuffers(glfwWindow); // swap the color buffers ( It should be at the end and after rendering of any graphics otherwise graphic won't be visible)
+
+            MouseListener.endFrame();
 
             endTime = (float) glfwGetTime();
             dt = endTime - beginTime;
             beginTime = Time.getTime();
 
         }
+        currentScene.saveExit();
     }
     public static int getWidth(){
         return get().width;
@@ -203,4 +246,15 @@ public class Window {
         get().height = height;
     }
 
+    public static Framebuffer getFramebuffer(){
+        return get().framebuffer;
+    }
+
+    public static float getTargetAspectRatio(){
+        return 16.0f / 9.0f;
+    }
+
+    public static ImGuiLayer getImGuiLayer(){
+        return get().imGuiLayer;
+    }
 }

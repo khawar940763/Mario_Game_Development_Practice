@@ -2,6 +2,7 @@ package renderer;
 
 import components.SpriteRenderer;
 import jade.Window;
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import util.AssetPool;
@@ -20,11 +21,13 @@ public class RenderBatch implements Comparable<RenderBatch>{
     private final int COLOR_SIZE = 4;
     private final int TEX_COORDS_SIZE = 2;
     private final int TEX_ID_SIZE = 1;
+    private final int ENTITY_ID_SIZE = 1;
     private final int POS_OFFSET = 0;
     private final int COLOR_OFFSET = POS_OFFSET + POS_SIZE * Float.BYTES;
     private final int TEX_COORDS_OFFSET = COLOR_OFFSET + COLOR_SIZE * Float.BYTES;
     private final int TEX_ID_OFFSET = TEX_COORDS_OFFSET + TEX_COORDS_SIZE * Float.BYTES;
-    private final int VERTEX_SIZE = 9;
+    private final int ENITY_ID_OFFSET = TEX_ID_OFFSET + TEX_ID_SIZE * Float.BYTES;
+    private final int VERTEX_SIZE = 10;
     private final int VERTEX_SIZE_FLOAT = VERTEX_SIZE * Float.BYTES;
 
     private SpriteRenderer[] sprites;
@@ -34,15 +37,14 @@ public class RenderBatch implements Comparable<RenderBatch>{
 
     private int vboID , vaoID;
     private int maxBatchSize;
-    private Shader shader;
     private List<Texture> textures ;
     private int[] texSlots = { 0 , 1 , 2 , 3 , 4 , 5 , 6, 7};
     private int zIndex;
 
     public RenderBatch(int maxBatchSize , int zIndex){
         this.zIndex = zIndex;
-        shader = AssetPool.getShader("assets/shaders/default.glsl");
-        shader.compile();
+//        shader = AssetPool.getShader("assets/shaders/default.glsl");
+//        shader.compile();
         this.sprites = new SpriteRenderer[maxBatchSize];
         this.maxBatchSize = maxBatchSize;
 
@@ -84,6 +86,9 @@ public class RenderBatch implements Comparable<RenderBatch>{
         glVertexAttribPointer(3 , TEX_ID_SIZE , GL_FLOAT, false, VERTEX_SIZE_FLOAT ,  TEX_ID_OFFSET);
         glEnableVertexAttribArray(3);
 
+        glVertexAttribPointer(4 , ENTITY_ID_SIZE , GL_FLOAT, false, VERTEX_SIZE_FLOAT ,  ENITY_ID_OFFSET);
+        glEnableVertexAttribArray(4);
+
     }
 
     public void addSprite( SpriteRenderer spr){
@@ -118,11 +123,22 @@ public class RenderBatch implements Comparable<RenderBatch>{
         int texID = 0;
         if(sprite.getTexture() != null){
             for(int i = 0 ; i< textures.size(); i++){
-                if(textures.get(i) == sprite.getTexture()){
+                if(textures.get(i).equals(sprite.getTexture())){
                     texID = i + 1;
                     break;
                 }
             }
+        }
+
+        boolean isRotated = sprite.gameObject.transform.rotation != 0.0f;
+        Matrix4f transformMatrix = new Matrix4f().identity();
+        if(isRotated){
+            transformMatrix.translate(sprite.gameObject.transform.position.x ,
+                    sprite.gameObject.transform.position.y , 0);
+            transformMatrix.rotate((float) Math.toRadians(sprite.gameObject.transform.rotation) ,
+                    0 , 0 , 1);
+            transformMatrix.scale(sprite.gameObject.transform.scale.x ,
+                    sprite.gameObject.transform.scale.y , 1);
         }
 
         /*      *(3)    *(0)
@@ -131,20 +147,57 @@ public class RenderBatch implements Comparable<RenderBatch>{
          */
 
         // Add vertices with appropriate properties
-        float yAdd = 1.0f;
-        float xAdd = 1.0f;
-        for(int i = 0 ; i < 4 ; i++){
-            if( i == 1){
-                yAdd = 0.0f;
-            }else if( i == 2){
-                xAdd = 0.0f;
-            }else if( i == 3 ){
-                yAdd = 1.0f;
+//        float yAdd = 1.0f;
+//        float xAdd = 1.0f;
+//        for(int i = 0 ; i < 4 ; i++){
+//            if( i == 1){
+//                yAdd = 0.0f;
+//            }else if( i == 2){
+//                xAdd = 0.0f;
+//            }else if( i == 3 ){
+//                yAdd = 1.0f;
+//            }
+
+//        float yAdd = 1.0f;
+//        float xAdd = 0.0f;
+//        for(int i = 0 ; i < 4 ; i++){
+//            if( i == 1){
+//                xAdd = 1.0f;
+//                yAdd = 1.0f;
+//            }else if( i == 2){
+//                xAdd = 1.0f;
+//                yAdd = 0.0f;
+//            }else if( i == 3 ){
+//                xAdd = 0.0f;
+//                yAdd = 0.0f;
+//            }
+
+            float yAdd = 0.0f;
+            float xAdd = 0.0f;
+            for(int i = 0 ; i < 4 ; i++){
+                if( i == 1){
+                    xAdd = 0.0f;
+                    yAdd = 1.0f;
+                }else if( i == 2){
+                    xAdd = 1.0f;
+                    yAdd = 1.0f;
+                }else if( i == 3 ){
+                    xAdd = 1.0f;
+                    yAdd = 0.0f;
+                }
+
+            Vector4f currentPos = new Vector4f(sprite.gameObject.transform.position.x +
+                    (xAdd * sprite.gameObject.transform.scale.x) ,
+                    sprite.gameObject.transform.position.y +
+                            (yAdd * sprite.gameObject.transform.scale.y), 0 , 1);
+
+            if(isRotated){
+                currentPos =  new Vector4f(xAdd , yAdd , 0 , 1).mul(transformMatrix);
             }
 
             //Load position
-            vertices[offset] = sprite.gameObject.transform.position.x + (xAdd * sprite.gameObject.transform.scale.x);
-            vertices[offset + 1] = sprite.gameObject.transform.position.y + (yAdd * sprite.gameObject.transform.scale.y);
+            vertices[offset] = currentPos.x;
+            vertices[offset + 1] = currentPos.y;
 
             //Load color
             vertices[offset + 2] = color.x;
@@ -158,6 +211,9 @@ public class RenderBatch implements Comparable<RenderBatch>{
 
             //Load texture id
             vertices[offset + 8] = texID;
+
+            //Load entiy id
+            vertices[offset + 9] = sprite.gameObject.getUid() + 1;
 
 
             offset += VERTEX_SIZE;
@@ -186,7 +242,7 @@ public class RenderBatch implements Comparable<RenderBatch>{
         }
 
           //use shader
-        shader.use();
+        Shader shader = Renderer.getBoundShader();
         shader.uploadMatrix4f("uProjection" , Window.getScene().camera().getProjectionMatrix());
         shader.uploadMatrix4f("uView" , Window.getScene().camera().getViewMatrix());
         for(int i =  0 ; i < textures.size() ; i++){

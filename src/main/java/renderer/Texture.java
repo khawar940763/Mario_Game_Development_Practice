@@ -5,17 +5,38 @@ import org.lwjgl.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.stb.STBImage.stbi_image_free;
-import static org.lwjgl.stb.STBImage.stbi_load;
+import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.stb.STBImage.*;
 
 public class Texture {
     private String filePath;
-    private int texID;
+    private transient int texID;
     private int height;
     private int  width;
 
-    public Texture(String filePath){
+//    public Texture(String filePath){
+//
+//
+//    }
+
+    public Texture(){
+        texID = -1;
+        width = -1;
+        height = -1;
+    }
+    public Texture(int width , int height){
+        this.filePath  = "Generated";
+
+        //Generate texture on GPU
+        texID = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D,  texID);
+
+        glTexParameteri(GL_TEXTURE_2D , GL_TEXTURE_MIN_FILTER , GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D , GL_TEXTURE_MAG_FILTER , GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0 , GL_RGB, width , height, 0 , GL_RGB, GL_UNSIGNED_BYTE , 0 );
+    }
+
+    public void init(String filePath){
         this.filePath  = filePath;
 
         //Generate texture on GPU
@@ -37,6 +58,7 @@ public class Texture {
         IntBuffer width = BufferUtils.createIntBuffer(1);
         IntBuffer height = BufferUtils.createIntBuffer(1);
         IntBuffer channels = BufferUtils.createIntBuffer(1);
+        stbi_set_flip_vertically_on_load(true);
         ByteBuffer image = stbi_load(filePath , width ,height , channels , 0);
 
         if(image != null){
@@ -55,12 +77,11 @@ public class Texture {
                 assert false: "Unhandled no of channels "+channels.get(0)+" for "+filePath+"in texture)!";
             }
 
-            }else{
+        }else{
             assert false: "Unable to load the image "+filePath+"in texture!";
         }
 
         stbi_image_free(image);
-
     }
 
     public void bind(){
@@ -75,7 +96,23 @@ public class Texture {
         return this.width;
     }
 
+    public String getFilePath(){
+        return this.filePath;
+    }
+
     public int getHeight(){
         return this.height;
+    }
+
+    public int getId(){
+        return texID;
+    }
+
+    @Override
+    public boolean equals(Object o){
+        if(o == null) return false;
+        if(!(o instanceof Texture)) return false;
+        Texture oTex = (Texture) o;
+        return oTex.getWidth() == this.width && oTex.getHeight() == this.height && oTex.getId() == this.texID && oTex.getFilePath().equals(this.filePath);
     }
 }

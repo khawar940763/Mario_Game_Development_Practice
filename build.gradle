@@ -21,11 +21,8 @@ project.ext.imguiVersion = "1.86"
 
 
 dependencies {
-//
-//    implementation "io.imgui.java:binding:$imguiVersion"
-//    implementation "io.imgui.java:lwjgl3:$imguiVersion"
-//
-//    runtimeOnly "io.imgui.java:natives-windows:$imguiVersion"
+      //GSON
+    implementation 'com.google.code.gson:gson:2.9.1'
 
     //Imgui files
     implementation fileTree('libs') { include '*.jar'}
